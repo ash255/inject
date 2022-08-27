@@ -117,22 +117,42 @@ description:
 */
 int ptrace_call(pid_t pid, void* addr, std_width *params, int num_params, struct pt_regs * regs)      
 {      
-    //x86 call in linux
-    //stack 
+    //x86_64 call in linux
+    //note: param transmit by register and stackavail
+    //first rdi,rsi,rdx,rcx,r8,r9
+    //second stack
     
     if(num_params > 0)
+        regs->rdi = params[0];
+    
+    if(num_params > 1)
+        regs->rsi = params[1];
+    
+    if(num_params > 2)
+        regs->rdx = params[2];
+
+    if(num_params > 3)
+        regs->rcx = params[3];
+    
+    if(num_params > 4)
+        regs->r8 = params[4];
+
+    if(num_params > 5)
+        regs->r9 = params[5];
+    
+    if(num_params > 6)
     {
-        int stack_params_num = num_params;
-        regs->esp -= (stack_params_num) * sizeof(std_width);      
-        ptrace_writedata(pid, (void *)regs->esp, (uint8_t *)params, (stack_params_num) * sizeof(std_width));    
+        int stack_params_num = num_params-6;
+        regs->rsp -= (stack_params_num) * sizeof(std_width);      
+        ptrace_writedata(pid, (void *)regs->rsp, (uint8_t *)&params[6], (stack_params_num) * sizeof(std_width));    
     }
     
     //write return address 0 to make process hang up when call finish
     std_width tmp_addr = 0x00;      
-    regs->esp -= sizeof(std_width);      
-    ptrace_writedata(pid, (uint8_t*)regs->esp, (uint8_t *)&tmp_addr, sizeof(std_width));       
+    regs->rsp -= sizeof(std_width);      
+    ptrace_writedata(pid, (uint8_t*)regs->rsp, (uint8_t *)&tmp_addr, sizeof(std_width));       
     
-    regs->eip = addr;      
+    regs->rip = addr;      
       
     if(ptrace_setregs(pid, regs) == -1 || ptrace_continue(pid) == -1) 
     {    
@@ -287,7 +307,7 @@ description:
 */    
 std_width ptrace_retval(struct pt_regs *regs)      
 {              
-    return regs->eax;
+    return regs->rax;
 }      
 
 /*
@@ -301,7 +321,7 @@ description:
 */    
 std_width ptrace_pc(struct pt_regs *regs)      
 {      
-    return regs->eip;
+    return regs->rip;
 }      
 
 /*
@@ -333,7 +353,7 @@ int ptrace_call_wrapper(pid_t pid, const char *func_name, void * addr, std_width
     }   
     
     //if pc is no zero, call may be failed depend on ptrace_call
-    LOGD("ptrace_call_wrapper[%s]: pid=%d return value=%X, pc=%X\n", func_name, pid, ptrace_retval(regs), ptrace_pc(regs)); 
+    LOGD("ptrace_call_wrapper[%s]: pid=%d return value=%llX, pc=%llX\n", func_name, pid, ptrace_retval(regs), ptrace_pc(regs)); 
     
     if(ptrace_pc(regs) != 0)
         return -1;

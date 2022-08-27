@@ -14,6 +14,7 @@
 #define SERVER_PORT 43999
 
 static int server_status = 0;
+static char lib[] = "/home/mjs/Desktop/x86/inject/test_so.so";
 
 static void* cli_loop(void *argv)
 {

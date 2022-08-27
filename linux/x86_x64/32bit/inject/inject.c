@@ -4,7 +4,7 @@
 #define FUNCTION_NAME_ADDR_OFFSET       0x100    
 #define FUNCTION_PARAM_ADDR_OFFSET      0x200
 
-static char libc_link[] = "/lib/x86_64-linux-gnu/libc.so.6";
+static char libc_link[] = "/lib32/libc.so.6";
 static char libc_path[100] = {0};
 
 /*
@@ -44,7 +44,7 @@ static void* get_module_base(pid_t pid, const char* module_name)
             {  
                 //split string by '-'
                 pch = strtok(line, "-");  
-                addr = (void*)strtoull(pch, NULL, 16);
+                addr = (void*)strtoul(pch, NULL, 16);
                 break;      
             }      
         }      
@@ -267,9 +267,9 @@ static int inject_remote_process(pid_t target_pid, char *library_path, char *fun
     //write so path into memory
     ptrace_writedata(target_pid, map_base, (uint8_t*)library_path, strlen(library_path) + 1);    
     
-    //dlopen("xxx.so", RTLD_NOW | RTLD_GLOBAL)        
+    //dlopen("xxx.so", RTLD_NOW | RTLD_GLOBAL)
     parameters[0] = map_base;         
-    parameters[1] = RTLD_NOW| RTLD_GLOBAL;       
+    parameters[1] = RTLD_NOW;//| RTLD_GLOBAL;
     if (ptrace_call_wrapper(target_pid, "dlopen", dlopen_addr, parameters, 2, &regs) == -1)
     {
         LOGD("inject_remote_process: call dlopen failed\n");

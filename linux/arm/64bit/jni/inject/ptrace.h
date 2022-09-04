@@ -18,8 +18,8 @@
 #include <android/log.h>
 #include <sys/uio.h>
 
-//#define pt_regs  user_pt_regs
-#define std_width uint32_t
+#define pt_regs  user_pt_regs
+#define std_width uint64_t
 
 int ptrace_readdata(pid_t pid,  uint8_t *src, uint8_t *buf, size_t size);
 int ptrace_writedata(pid_t pid, uint8_t *dest, uint8_t *data, size_t size);

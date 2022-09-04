@@ -117,43 +117,43 @@ return:
 description:
     call specified address
 */
-#define max_register_param   8
+#define max_register_param   4
 #define CPSR_T_MASK             (1u<<5) 
 int ptrace_call(pid_t pid, void* addr, std_width *params, int num_params, struct pt_regs * regs)      
 {      
     //x86_64 call in arm
     //note: param transmit by register and stackavail
-    //first x0-x7
+    //first x0-x3
     //second stack
     
     int i;
      
     for (i=0; i<num_params && i<max_register_param; i++) 
     {      
-        regs->regs[i] = params[i];
+        regs->uregs[i] = params[i];
     } 
     
     if(num_params > max_register_param)
     {
         int stack_params_num = num_params - max_register_param;
-        regs->sp -= (stack_params_num) * sizeof(std_width);      
-        ptrace_writedata(pid, (void *)regs->sp, (uint8_t *)&params[max_register_param], (stack_params_num) * sizeof(std_width));    
+        regs->ARM_sp -= (stack_params_num) * sizeof(std_width);      
+        ptrace_writedata(pid, (void *)regs->ARM_sp, (uint8_t *)&params[max_register_param], (stack_params_num) * sizeof(std_width));    
     }
     
     //write return address 0 to make process hang up when call finish      
-    regs->regs[30] = 0; //regs->lr         
+    regs->ARM_lr = 0; //regs->lr         
     
-    regs->pc = addr;
+    regs->ARM_pc = addr;
     //arm or thumb
-    if (regs->pc & 1) 
+    if (regs->ARM_pc & 1) 
     {      
         //thumb    
-        regs->pc &= (~1u); 
-        regs->pstate |= CPSR_T_MASK;      
+        regs->ARM_pc &= (~1u); 
+        regs->ARM_cpsr |= CPSR_T_MASK;      
     } else 
     {      
         //arm
-        regs->pstate &= ~CPSR_T_MASK;      
+        regs->ARM_cpsr &= ~CPSR_T_MASK;      
     } 
     
     if(ptrace_setregs(pid, regs) == -1 || ptrace_continue(pid) == -1) 
@@ -189,13 +189,7 @@ description:
 */
 int ptrace_getregs(pid_t pid, struct pt_regs * regs)      
 {
-    int regset = NT_PRSTATUS;
-    struct iovec ioVec;
-    
-    ioVec.iov_base = regs;
-    ioVec.iov_len = sizeof(*regs);
-    
-    if(ptrace(PTRACE_GETREGSET, pid, (void*)regset, &ioVec) < 0) 
+    if(ptrace(PTRACE_GETREGS, pid, NULL, regs) < 0) 
     {      
         LOGD("ptrace_getregs failed\n");      
         return -1;      
@@ -216,13 +210,7 @@ description:
 */
 int ptrace_setregs(pid_t pid, struct pt_regs * regs)      
 {       
-    int regset = NT_PRSTATUS;
-    struct iovec ioVec;
-    
-    ioVec.iov_base = regs;
-    ioVec.iov_len = sizeof(*regs);
-    
-    if(ptrace(PTRACE_SETREGSET, pid, (void*)regset, &ioVec) < 0) 
+    if(ptrace(PTRACE_SETREGS, pid, NULL, regs) < 0) 
     {      
         LOGD("ptrace_setregs failed\n");      
         return -1;      
@@ -319,7 +307,7 @@ description:
 */    
 std_width ptrace_retval(struct pt_regs *regs)      
 {              
-    return regs->regs[0];    //regs->r0
+    return regs->uregs[0];    //regs->r0
 }      
 
 /*
@@ -333,7 +321,7 @@ description:
 */    
 std_width ptrace_pc(struct pt_regs *regs)      
 {      
-    return regs->pc;
+    return regs->ARM_pc;
 }      
 
 /*
@@ -365,7 +353,7 @@ int ptrace_call_wrapper(pid_t pid, const char *func_name, void * addr, std_width
     }   
     
     //if pc is no zero, call may be failed depend on ptrace_call
-    LOGD("ptrace_call_wrapper[%s]: pid=%d return value=%lX, pc=%lX\n", func_name, pid, ptrace_retval(regs), ptrace_pc(regs));
+    LOGD("ptrace_call_wrapper[%s]: pid=%d return value=%X, pc=%X\n", func_name, pid, ptrace_retval(regs), ptrace_pc(regs));
     
     if(ptrace_pc(regs) != 0)
         return -1;

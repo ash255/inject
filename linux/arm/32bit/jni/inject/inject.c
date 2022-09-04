@@ -4,8 +4,8 @@
 #define FUNCTION_NAME_ADDR_OFFSET       0x100    
 #define FUNCTION_PARAM_ADDR_OFFSET      0x200
 
-static char libc_path[] = "/system/lib64/libc.so";
-static char linker_path[] = "/system/bin/linker64";
+static char libc_path[] = "/system/lib/libc.so";
+static char linker_path[] = "/system/bin/linker";
 
 /*
 function: get_module_base
